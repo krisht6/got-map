@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Game of Thrones – Interactive Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #05070b;
+      --panel: #0d1018;
+      --accent: #f5c453;
+      --accent-soft: rgba(245, 196, 83, 0.14);
+      --text-main: #f7f7f7;
+      --text-muted: #a3a8b8;
+      --border-subtle: #1b2030;
+      --danger: #ff5b5b;
+      --shadow-soft: 0 18px 35px rgba(0, 0, 0, 0.65);
+      --radius-lg: 18px;
+      --radius-pill: 999px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #15192b 0, #05070b 55%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      padding: 20px;
+    }
+
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      max-width: 1200px;
+      width: 100%;
+      background: radial-gradient(circle at top left, #15192b 0, #05070b 55%);
+      border-radius: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+    }
+
+    .header {
+      padding: 18px 22px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .title span.sigil-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent);
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .badge-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      background: rgba(8, 12, 22, 0.9);
+    }
+
+    .badge-accent {
+      border-color: rgba(245, 196, 83, 0.6);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2.1fr);
+      min-height: 520px;
+    }
+
+    @media (max-width: 880px) {
+      .content {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* MAP PANEL */
+
+    .map-panel {
+      position: relative;
+      border-right: 1px solid var(--border-subtle);
+      overflow: hidden;
+      background: #05070b;
+    }
+
+    @media (max-width: 880px) {
+      .map-panel {
+        border-right: none;
+        border-bottom: 1px solid var(--border-subtle);
+        min-height: 380px;
+      }
+    }
+
+    .map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+  background-image: url("westeros-map.jpg");
+  background-size: contain;         /* show full image */
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: #05070b;
+  filter: saturate(0.9) contrast(1.05);
+}
+
+
+    @media (max-width: 880px) {
+      .map-wrapper {
+        min-height: 380px;
+      }
+    }
+
+    .map-overlay-vignette {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(
+          circle at top,
+          transparent 0,
+          transparent 45%,
+          rgba(0, 0, 0, 0.45) 100%
+        ),
+        radial-gradient(
+          circle at bottom,
+          transparent 0,
+          transparent 35%,
+          rgba(0, 0, 0, 0.65) 100%
+        );
+      pointer-events: none;
+    }
+
+    .map-toolbar {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      display: flex;
+      gap: 8px;
+      z-index: 20;
+    }
+
+    .map-chip {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      padding: 5px 11px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(4, 8, 18, 0.85);
+      color: var(--text-muted);
+      backdrop-filter: blur(12px);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.18s ease;
+    }
+
+    .map-chip span.dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(245, 196, 83, 0.5);
+    }
+
+    .map-chip.active,
+    .map-chip:hover {
+      color: var(--accent);
+      border-color: rgba(245, 196, 83, 0.7);
+      background: rgba(10, 8, 1, 0.95);
+    }
+
+    .poi-marker {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #ffe4a4 0, #f5c453 40%, #d7900b 100%);
+      box-shadow: 0 0 12px rgba(245, 196, 83, 0.9),
+        0 0 30px rgba(0, 0, 0, 0.9);
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      border: 1px solid rgba(0, 0, 0, 0.6);
+      transition: transform 0.12s ease, box-shadow 0.12s ease,
+        background 0.12s ease;
+    }
+
+    .poi-marker::after {
+      content: "";
+      position: absolute;
+      inset: -9px;
+      border-radius: inherit;
+      border: 1px solid rgba(245, 196, 83, 0.32);
+      opacity: 0.7;
+    }
+
+    .poi-marker:hover {
+      transform: translate(-50%, -50%) scale(1.18);
+      box-shadow: 0 0 16px rgba(245, 196, 83, 1),
+        0 0 36px rgba(0, 0, 0, 1);
+    }
+
+    .poi-marker.selected {
+      transform: translate(-50%, -50%) scale(1.25);
+      box-shadow: 0 0 18px rgba(245, 196, 83, 1),
+        0 0 40px rgba(245, 196, 83, 0.9);
+    }
+
+    .poi-label {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      margin-top: -20px;
+      font-size: 11px;
+      color: #f8f1dc;
+      text-shadow: 0 0 6px rgba(0, 0, 0, 0.98);
+      pointer-events: none;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.16s ease;
+    }
+
+    .poi-marker:hover + .poi-label {
+      opacity: 1;
+    }
+
+
+    /* DETAILS PANEL */
+
+    .details-panel {
+      background: radial-gradient(circle at top right, #181b29 0, #05070b 60%);
+      padding: 18px 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .details-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .details-header-main {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .details-location-name {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .details-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .meta-pill {
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-subtle);
+      background: rgba(10, 12, 20, 0.9);
+    }
+
+    .meta-pill.highlight {
+      border-color: rgba(245, 196, 83, 0.7);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .spoiler-note {
+      font-size: 11px;
+      color: var(--danger);
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+    }
+
+    .details-description {
+      font-size: 13px;
+      line-height: 1.58;
+      color: #dfe3f0;
+      padding: 10px 11px;
+      border-radius: 12px;
+      background: rgba(6, 9, 18, 0.96);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .details-highlight {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #f8e3b3;
+    }
+
+    .details-list-header {
+      margin-top: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .details-list-header span.count {
+      font-weight: 400;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .poi-list {
+      margin-top: 6px;
+      max-height: 220px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .poi-list-item {
+      padding: 7px 8px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      cursor: pointer;
+      transition: background 0.12s ease, border-color 0.12s ease,
+        transform 0.08s ease;
+      font-size: 13px;
+    }
+
+    .poi-list-item:hover {
+      background: rgba(17, 20, 33, 0.95);
+      border-color: rgba(255, 255, 255, 0.07);
+      transform: translateY(-1px);
+    }
+
+    .poi-list-item.active {
+      background: rgba(245, 196, 83, 0.12);
+      border-color: rgba(245, 196, 83, 0.65);
+    }
+
+    .poi-list-name {
+      font-weight: 500;
+    }
+
+    .poi-list-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .empty-state {
+      font-size: 13px;
+      color: var(--text-muted);
+      padding: 10px 2px;
+    }
+
+    /* Scrollbar tweaks (optional) */
+    .poi-list::-webkit-scrollbar {
+      width: 6px;
+    }
+    .poi-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .poi-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="header">
+      <div class="title-group">
+        <div class="title">
+          <span class="sigil-dot"></span>
+          Game of Thrones
+          <span style="opacity: 0.6; font-weight: 400;">/ War of the Five Kings Atlas</span>
+        </div>
+        <div class="subtitle">
+          Click major locations to see key events that happened there in the show (light spoilers).
+        </div>
+      </div>
+      <div class="badge-row">
+        <div class="badge badge-accent">Interactive Map</div>
+        <div class="badge">POIs: Battles, Seats of Power, Pivotal Scenes</div>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- MAP PANEL -->
+      <section class="map-panel">
+        <div class="map-wrapper" id="map">
+          <div class="map-toolbar">
+            <button class="map-chip active" data-filter="all">
+              <span class="dot"></span> All
+            </button>
+            <button class="map-chip" data-filter="castle">Castles</button>
+            <button class="map-chip" data-filter="battle">Battles</button>
+            <button class="map-chip" data-filter="politics">Politics & Courts</button>
+          </div>
+
+          <!-- POIs will be injected here -->
+          <div class="map-overlay-vignette"></div>
+
+        </div>
+      </section>
+
+      <!-- DETAILS PANEL -->
+      <section class="details-panel">
+        <div class="details-header">
+          <div class="details-header-main">
+            <div class="details-location-name" id="details-title">
+              Choose a location
+            </div>
+            <div class="details-meta" id="details-meta">
+              <span class="meta-pill">No location selected</span>
+            </div>
+          </div>
+          <div class="spoiler-note">Contains story spoilers</div>
+        </div>
+
+        <div class="details-description" id="details-description">
+          Click a glowing marker on the map, or pick a place from the list below to see a quick lore recap of what happened there in the HBO series.
+          <div class="details-highlight">
+            Tip: Use this side panel like a mini wiki while you rewatch or re-read.
+          </div>
+        </div>
+
+        <div class="details-list-header">
+          <span>Major Locations & Events</span>
+          <span class="count" id="poi-count">0 places</span>
+        </div>
+
+        <div class="poi-list" id="poi-list">
+          <div class="empty-state">
+            Start by selecting a location to populate this list.
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // --- DATA: Points of Interest (POIs)
+    const POIS = [
+  {
+    id: "kings-landing",
+    name: "King's Landing",
+    region: "The Crownlands",
+    type: "politics",
+    typeLabel: "Capital / Politics",
+    x: 49,   // was 53
+    y: 67,   // was 64
+    summary:
+      "Capital of the Seven Kingdoms and seat of the Iron Throne for most of the series.",
+    events: [
+      "Ned Stark serves briefly as Hand of the King and uncovers the truth about Joffrey's parentage.",
+      "The Battle of the Blackwater, where Tyrion and wildfire defend the city from Stannis Baratheon.",
+      "Cersei's rise to power, her trial by the Faith, and the destruction of the Great Sept of Baelor with wildfire."
+    ]
+  },
+  {
+    id: "winterfell",
+    name: "Winterfell",
+    region: "The North",
+    type: "castle",
+    typeLabel: "Castle / House Stark",
+    x: 44,  // was 48
+    y: 33,  // was 30
+    summary:
+      "Ancestral seat of House Stark and one of the most important strongholds in the North.",
+    events: [
+      "The Starks receive King Robert Baratheon, setting the main story in motion.",
+      "Bran Stark's fall from the tower, witnessed by Jaime and Cersei Lannister.",
+      "Theon Greyjoy's brief occupation, followed by the brutal takeover by House Bolton.",
+      "The Battle of the Bastards, where Jon Snow and Sansa reclaim the castle from Ramsay Bolton."
+    ]
+  },
+  {
+    id: "the-wall",
+    name: "Castle Black & The Wall",
+    region: "The North",
+    type: "castle",
+    typeLabel: "Night's Watch / Border",
+    x: 45,  // was 49
+    y: 18,  // was 15
+    summary:
+      "A massive wall of ice defending the realms of men from the dangers beyond.",
+    events: [
+      "Jon Snow joins the Night's Watch and rises from recruit to Lord Commander.",
+      "The Great Ranging and encounter with the White Walkers and wildlings.",
+      "The Battle of Castle Black when wildlings assault the Wall.",
+      "The Night King and the army of the dead eventually breach the Wall."
+    ]
+  },
+  {
+    id: "hardhome",
+    name: "Hardhome",
+    region: "Beyond the Wall",
+    type: "battle",
+    typeLabel: "Battle / White Walkers",
+    x: 51,  // was 55
+    y: 12,  // was 9
+    summary:
+      "A wildling settlement that becomes the site of a devastating clash with the White Walkers.",
+    events: [
+      "Jon Snow travels to Hardhome to rescue wildlings and bring them south of the Wall.",
+      "The Night King leads a surprise assault, slaughtering the living.",
+      "The iconic moment where the Night King raises the dead in front of Jon."
+    ]
+  },
+  {
+    id: "twins",
+    name: "The Twins",
+    region: "The Riverlands",
+    type: "battle",
+    typeLabel: "Stronghold / Ambush",
+    x: 42,  // was 46
+    y: 49,  // was 46
+    summary:
+      "Twin castles controlled by House Frey, guarding the strategic crossing of the Green Fork.",
+    events: [
+      "Robb Stark seeks passage during his campaign in the War of the Five Kings.",
+      "The infamous Red Wedding occurs here, where Robb Stark, Catelyn Stark, and many Northern lords are betrayed and killed under guest right."
+    ]
+  },
+  {
+    id: "riverrun",
+    name: "Riverrun",
+    region: "The Riverlands",
+    type: "castle",
+    typeLabel: "Castle / House Tully",
+    x: 39,  // was 43
+    y: 55,  // was 52
+    summary:
+      "Seat of House Tully and key stronghold in the Riverlands.",
+    events: [
+      "Catelyn Stark's home and the place where Robb musters Riverland support.",
+      "Later besieged by the Freys and Lannisters after the Red Wedding.",
+      "Brienne of Tarth and Jaime Lannister both attempt to negotiate control of the castle."
+    ]
+  },
+  {
+    id: "harrenhal",
+    name: "Harrenhal",
+    region: "The Riverlands",
+    type: "castle",
+    typeLabel: "Ruined Castle",
+    x: 45,  // was 49
+    y: 57,  // was 54
+    summary:
+      "A colossal, half-ruined castle said to be cursed after being burned by dragons.",
+    events: [
+      "Arya Stark serves incognito as a cupbearer while Tywin Lannister holds court there.",
+      "Gendry and other captives are taken there by the Lannisters.",
+      "Used as a base by multiple factions throughout the war, but never truly held for long."
+    ]
+  },
+  {
+    id: "dragonstone",
+    name: "Dragonstone",
+    region: "The Narrow Sea",
+    type: "castle",
+    typeLabel: "Island Stronghold",
+    x: 55,  // was 59
+    y: 66,  // was 63
+    summary:
+      "Ancestral Targaryen stronghold built on a volcanic island in Blackwater Bay.",
+    events: [
+      "Stannis Baratheon rules from here early in the war, advised by Melisandre.",
+      "The ritual with Gendry's king's blood and the burning of the Seven idols.",
+      "Daenerys later lands here when she finally returns to Westeros and plans her conquest."
+    ]
+  },
+  {
+    id: "highgarden",
+    name: "Highgarden",
+    region: "The Reach",
+    type: "castle",
+    typeLabel: "Castle / House Tyrell",
+    x: 41,  // was 45
+    y: 81,  // was 78
+    summary:
+      "Prosperous and fertile seat of House Tyrell, known for wealth and cunning politics.",
+    events: [
+      "Home base of Olenna Tyrell, the 'Queen of Thorns', who plays a key role in court intrigue.",
+      "Eventually falls to the Lannister army in a swift campaign.",
+      "Olenna's final confession about Joffrey's death occurs here."
+    ]
+  },
+  {
+    id: "pyke",
+    name: "Pyke",
+    region: "The Iron Islands",
+    type: "castle",
+    typeLabel: "Stronghold / House Greyjoy",
+    x: 34,  // was 38
+    y: 59,  // was 56
+    summary:
+      "Storm-battered seat of House Greyjoy, perched on sea stacks in the Iron Islands.",
+    events: [
+      "Theon Greyjoy returns home and struggles for his father's approval.",
+      "Kingsmoot where Euron Greyjoy claims the Salt Throne.",
+      "A launching point for Greyjoy naval raids and fleets."
+    ]
+  },
+  {
+    id: "braavos",
+    name: "Braavos",
+    region: "Essos",
+    type: "politics",
+    typeLabel: "Free City / Guilds",
+    x: 70,  // was 74
+    y: 41,  // was 38
+    summary:
+      "Powerful Free City known for the Iron Bank and the Faceless Men.",
+    events: [
+      "Arya Stark trains with the Faceless Men at the House of Black and White.",
+      "The Iron Bank finances several claimants to the throne, tipping the balance of power.",
+      "Arya learns to change faces and ultimately decides which parts of her old identity to keep."
+    ]
+  },
+  {
+    id: "mereen",
+    name: "Meereen",
+    region: "Slaver's Bay (Essos)",
+    type: "politics",
+    typeLabel: "City / Daenerys' Rule",
+    x: 78,  // was 82
+    y: 83,  // was 80
+    summary:
+      "Largest of the cities Daenerys conquers in Slaver's Bay.",
+    events: [
+      "Daenerys takes the city and tries to end slavery while ruling as queen.",
+      "The Sons of the Harpy resist her rule with masked assassins.",
+      "She ultimately leaves Meereen in the hands of local allies to sail for Westeros."
+    ]
+  }
+];
+
+
+
+    let selectedId = null;
+    let activeFilter = "all";
+
+    const mapEl = document.getElementById("map");
+    const detailsTitleEl = document.getElementById("details-title");
+    const detailsMetaEl = document.getElementById("details-meta");
+    const detailsDescriptionEl = document.getElementById("details-description");
+    const poiListEl = document.getElementById("poi-list");
+    const poiCountEl = document.getElementById("poi-count");
+
+    function renderMarkers() {
+      // Remove existing markers/labels (but not overlays/toolbar)
+      const oldMarkers = mapEl.querySelectorAll(".poi-marker, .poi-label");
+      oldMarkers.forEach((el) => el.remove());
+
+      POIS.forEach((poi) => {
+        if (activeFilter !== "all" && poi.type !== activeFilter) {
+          return;
+        }
+
+        const marker = document.createElement("button");
+        marker.className = "poi-marker";
+        marker.style.left = poi.x + "%";
+        marker.style.top = poi.y + "%";
+        marker.dataset.id = poi.id;
+
+        const label = document.createElement("div");
+        label.className = "poi-label";
+        label.style.left = poi.x + "%";
+        label.style.top = poi.y + "%";
+        label.textContent = poi.name;
+
+        marker.addEventListener("click", () => {
+          selectPoi(poi.id);
+        });
+
+        mapEl.appendChild(marker);
+        mapEl.appendChild(label);
+      });
+
+      syncMarkerSelection();
+    }
+
+    function renderList() {
+      poiListEl.innerHTML = "";
+      const visiblePois = POIS.filter(
+        (p) => activeFilter === "all" || p.type === activeFilter
+      );
+      poiCountEl.textContent =
+        visiblePois.length + (visiblePois.length === 1 ? " place" : " places");
+
+      if (!visiblePois.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "No locations match this filter.";
+        poiListEl.appendChild(empty);
+        return;
+      }
+
+      visiblePois.forEach((poi) => {
+        const item = document.createElement("div");
+        item.className = "poi-list-item";
+        item.dataset.id = poi.id;
+
+        const name = document.createElement("div");
+        name.className = "poi-list-name";
+        name.textContent = poi.name;
+
+        const meta = document.createElement("div");
+        meta.className = "poi-list-meta";
+        meta.textContent = `${poi.region} • ${poi.typeLabel}`;
+
+        item.appendChild(name);
+        item.appendChild(meta);
+
+        item.addEventListener("click", () => {
+          selectPoi(poi.id, { scroll: false });
+        });
+
+        poiListEl.appendChild(item);
+      });
+
+      syncListSelection();
+    }
+
+    function selectPoi(id) {
+      const poi = POIS.find((p) => p.id === id);
+      if (!poi) return;
+      selectedId = id;
+
+      detailsTitleEl.textContent = poi.name;
+
+      // meta tags
+      detailsMetaEl.innerHTML = "";
+      const regionPill = document.createElement("span");
+      regionPill.className = "meta-pill";
+      regionPill.textContent = poi.region;
+
+      const typePill = document.createElement("span");
+      typePill.className = "meta-pill highlight";
+      typePill.textContent = poi.typeLabel;
+
+      const countPill = document.createElement("span");
+      countPill.className = "meta-pill";
+      countPill.textContent = `${poi.events.length} key event${
+        poi.events.length > 1 ? "s" : ""
+      }`;
+
+      detailsMetaEl.appendChild(regionPill);
+      detailsMetaEl.appendChild(typePill);
+      detailsMetaEl.appendChild(countPill);
+
+      // description
+      const listItems = poi.events
+        .map((e) => `<li>${e}</li>`)
+        .join("");
+
+      detailsDescriptionEl.innerHTML = `
+        <div>${poi.summary}</div>
+        <div class="details-highlight">Key moments:</div>
+        <ul style="margin-left: 1em; margin-top: 4px; padding-left: 10px; font-size: 12px;">
+          ${listItems}
+        </ul>
+      `;
+
+      syncMarkerSelection();
+      syncListSelection();
+    }
+
+    function syncMarkerSelection() {
+      const markers = mapEl.querySelectorAll(".poi-marker");
+      markers.forEach((m) => {
+        if (m.dataset.id === selectedId) {
+          m.classList.add("selected");
+        } else {
+          m.classList.remove("selected");
+        }
+      });
+    }
+
+    function syncListSelection() {
+      const items = poiListEl.querySelectorAll(".poi-list-item");
+      items.forEach((item) => {
+        if (item.dataset.id === selectedId) {
+          item.classList.add("active");
+        } else {
+          item.classList.remove("active");
+        }
+      });
+    }
+
+    function setupFilterChips() {
+      const chips = document.querySelectorAll(".map-chip");
+      chips.forEach((chip) => {
+        chip.addEventListener("click", () => {
+          chips.forEach((c) => c.classList.remove("active"));
+          chip.classList.add("active");
+          activeFilter = chip.dataset.filter || "all";
+          renderMarkers();
+          renderList();
+        });
+      });
+    }
+
+    // Init
+    setupFilterChips();
+    renderMarkers();
+    renderList();
+
+    // Pre-select a popular spot
+    selectPoi("kings-landing");
+  </script>
+</body>
+</html>
