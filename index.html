@@ -2,869 +2,989 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Game of Thrones – Interactive Map</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Westeros Atlas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #05070b;
-      --panel: #0d1018;
-      --accent: #f5c453;
-      --accent-soft: rgba(245, 196, 83, 0.14);
-      --text-main: #f7f7f7;
-      --text-muted: #a3a8b8;
-      --border-subtle: #1b2030;
-      --danger: #ff5b5b;
-      --shadow-soft: 0 18px 35px rgba(0, 0, 0, 0.65);
-      --radius-lg: 18px;
-      --radius-pill: 999px;
+      --bg: #0a0c10;
+      --surface: #11141a;
+      --surface-2: #171b23;
+      --line: #232833;
+      --text: #e9e6df;
+      --muted: #8b909c;
+      --faint: #5b616d;
+      --gold: #d9b45a;
+      --gold-soft: rgba(217, 180, 90, 0.12);
+      --red: #c8553d;
+      --header-h: 64px;
+      --serif: "Cinzel", Georgia, serif;
+      --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; }
 
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-        "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top, #15192b 0, #05070b 55%);
-      color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: stretch;
-      padding: 20px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
     }
 
-    .app-shell {
-      display: flex;
-      flex-direction: column;
-      max-width: 1200px;
-      width: 100%;
-      background: radial-gradient(circle at top left, #15192b 0, #05070b 55%);
-      border-radius: 28px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      box-shadow: var(--shadow-soft);
-      overflow: hidden;
-    }
+    button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+    /* ---------- Header ---------- */
 
     .header {
-      padding: 18px 22px 12px;
-      border-bottom: 1px solid var(--border-subtle);
+      height: var(--header-h);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 16px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--line);
     }
 
-    .title-group {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-
-    .title {
-      font-size: 22px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
+    .brand {
+      font-family: var(--serif);
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
-      display: flex;
-      align-items: center;
-      gap: 8px;
     }
 
-    .title span.sigil-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--accent);
-      box-shadow: 0 0 12px var(--accent);
+    .brand span { color: var(--gold); }
+
+    .filters { display: flex; gap: 4px; flex-wrap: wrap; }
+
+    .filter {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 999px;
+      color: var(--muted);
+      transition: color 0.15s, background 0.15s;
     }
 
-    .subtitle {
-      font-size: 13px;
-      color: var(--text-muted);
-    }
+    .filter:hover { color: var(--text); }
+    .filter.active { color: var(--gold); background: var(--gold-soft); }
 
-    .badge-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+    /* ---------- Layout ---------- */
 
-    .badge {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.09em;
-      padding: 4px 10px;
-      border-radius: var(--radius-pill);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-muted);
-      background: rgba(8, 12, 22, 0.9);
-    }
-
-    .badge-accent {
-      border-color: rgba(245, 196, 83, 0.6);
-      color: var(--accent);
-      background: var(--accent-soft);
-    }
-
-    .content {
+    .layout {
       display: grid;
-      grid-template-columns: minmax(0, 3fr) minmax(0, 2.1fr);
-      min-height: 520px;
+      grid-template-columns: minmax(0, 1fr) 420px;
+      height: calc(100dvh - var(--header-h));
     }
 
-    @media (max-width: 880px) {
-      .content {
-        grid-template-columns: 1fr;
-      }
+    .map-pane {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      min-width: 0;
     }
 
-    /* MAP PANEL */
-
-    .map-panel {
+    /* Fixed aspect ratio (matches westeros-map.jpg) so the map never resizes
+       and marker percentages always line up with the image. */
+    .map-frame {
       position: relative;
-      border-right: 1px solid var(--border-subtle);
+      width: min(100%, calc((100dvh - var(--header-h) - 48px) * 1280 / 1707));
+      aspect-ratio: 1280 / 1707;
       overflow: hidden;
-      background: #05070b;
+      border-radius: 12px;
+      touch-action: none;
+      cursor: grab;
+      user-select: none;
     }
 
-    @media (max-width: 880px) {
-      .map-panel {
-        border-right: none;
-        border-bottom: 1px solid var(--border-subtle);
-        min-height: 380px;
-      }
-    }
+    .map-frame.dragging { cursor: grabbing; }
 
-    .map-wrapper {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  min-height: 520px;
-  background-image: url("westeros-map.jpg");
-  background-size: contain;         /* show full image */
-  background-repeat: no-repeat;
-  background-position: center;
-  background-color: #05070b;
-  filter: saturate(0.9) contrast(1.05);
-}
-
-
-    @media (max-width: 880px) {
-      .map-wrapper {
-        min-height: 380px;
-      }
-    }
-
-    .map-overlay-vignette {
+    .map-canvas {
       position: absolute;
       inset: 0;
-      background: radial-gradient(
-          circle at top,
-          transparent 0,
-          transparent 45%,
-          rgba(0, 0, 0, 0.45) 100%
-        ),
-        radial-gradient(
-          circle at bottom,
-          transparent 0,
-          transparent 35%,
-          rgba(0, 0, 0, 0.65) 100%
-        );
+      transform-origin: 0 0;
+      background: var(--bg); /* backdrop for the image's screen blend */
+      --inv: 1;
+    }
+
+    .map-canvas.animate { transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1); }
+
+    /* Source image is black lines on white: invert it, then screen-blend so
+       the black drops out and only faint lines remain on the page background. */
+    .map-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      filter: invert(1) sepia(0.5) brightness(0.62);
+      mix-blend-mode: screen;
       pointer-events: none;
     }
 
-    .map-toolbar {
+    .region-label {
       position: absolute;
-      top: 14px;
-      left: 14px;
-      display: flex;
-      gap: 8px;
-      z-index: 20;
-    }
-
-    .map-chip {
+      transform: translate(-50%, -50%) scale(var(--inv));
+      font-family: var(--serif);
       font-size: 11px;
+      letter-spacing: 0.32em;
       text-transform: uppercase;
-      letter-spacing: 0.09em;
-      padding: 5px 11px;
-      border-radius: var(--radius-pill);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(4, 8, 18, 0.85);
-      color: var(--text-muted);
-      backdrop-filter: blur(12px);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.18s ease;
-    }
-
-    .map-chip span.dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: rgba(245, 196, 83, 0.5);
-    }
-
-    .map-chip.active,
-    .map-chip:hover {
-      color: var(--accent);
-      border-color: rgba(245, 196, 83, 0.7);
-      background: rgba(10, 8, 1, 0.95);
-    }
-
-    .poi-marker {
-      position: absolute;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: radial-gradient(circle, #ffe4a4 0, #f5c453 40%, #d7900b 100%);
-      box-shadow: 0 0 12px rgba(245, 196, 83, 0.9),
-        0 0 30px rgba(0, 0, 0, 0.9);
-      transform: translate(-50%, -50%);
-      cursor: pointer;
-      border: 1px solid rgba(0, 0, 0, 0.6);
-      transition: transform 0.12s ease, box-shadow 0.12s ease,
-        background 0.12s ease;
-    }
-
-    .poi-marker::after {
-      content: "";
-      position: absolute;
-      inset: -9px;
-      border-radius: inherit;
-      border: 1px solid rgba(245, 196, 83, 0.32);
-      opacity: 0.7;
-    }
-
-    .poi-marker:hover {
-      transform: translate(-50%, -50%) scale(1.18);
-      box-shadow: 0 0 16px rgba(245, 196, 83, 1),
-        0 0 36px rgba(0, 0, 0, 1);
-    }
-
-    .poi-marker.selected {
-      transform: translate(-50%, -50%) scale(1.25);
-      box-shadow: 0 0 18px rgba(245, 196, 83, 1),
-        0 0 40px rgba(245, 196, 83, 0.9);
-    }
-
-    .poi-label {
-      position: absolute;
-      transform: translate(-50%, -50%);
-      margin-top: -20px;
-      font-size: 11px;
-      color: #f8f1dc;
-      text-shadow: 0 0 6px rgba(0, 0, 0, 0.98);
+      color: var(--faint);
+      white-space: nowrap;
       pointer-events: none;
+    }
+
+    .map-controls {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(17, 20, 26, 0.9);
+      overflow: hidden;
+      z-index: 5;
+    }
+
+    .map-controls button {
+      width: 32px;
+      height: 32px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .map-controls button + button { border-top: 1px solid var(--line); }
+    .map-controls button:hover { color: var(--text); background: var(--surface-2); }
+
+    /* ---------- Markers ---------- */
+
+    .marker {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      transform: translate(-50%, -50%) scale(var(--inv));
+      display: grid;
+      place-items: center;
+      z-index: 2;
+    }
+
+    .marker .pin {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 0 3px rgba(217, 180, 90, 0.18);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .marker[data-type="battle"] .pin { background: var(--red); box-shadow: 0 0 0 3px rgba(200, 85, 61, 0.2); }
+    .marker[data-type="city"] .pin { background: #9fb4d8; box-shadow: 0 0 0 3px rgba(159, 180, 216, 0.18); }
+    .marker.offmap .pin { background: transparent; border: 1.5px dashed var(--gold); }
+
+    .marker .name {
+      position: absolute;
+      left: 50%;
+      bottom: 100%;
+      transform: translateX(-50%);
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(10, 12, 16, 0.92);
+      border: 1px solid var(--line);
+      font-size: 11px;
+      font-weight: 500;
       white-space: nowrap;
       opacity: 0;
-      transition: opacity 0.16s ease;
+      pointer-events: none;
+      transition: opacity 0.15s;
     }
 
-    .poi-marker:hover + .poi-label {
-      opacity: 1;
+    .marker:hover { z-index: 3; }
+    .marker:hover .pin { transform: scale(1.3); }
+    .marker:hover .name,
+    .marker.selected .name { opacity: 1; }
+
+    .marker.selected { z-index: 4; }
+    .marker.selected .pin {
+      transform: scale(1.4);
+      box-shadow: 0 0 0 4px rgba(10, 12, 16, 0.9), 0 0 0 5.5px currentColor;
+      color: var(--gold);
     }
 
+    .marker.dim { opacity: 0.15; pointer-events: none; }
 
-    /* DETAILS PANEL */
+    /* ---------- Side panel ---------- */
 
-    .details-panel {
-      background: radial-gradient(circle at top right, #181b29 0, #05070b 60%);
-      padding: 18px 18px 16px;
+    .panel {
+      border-left: 1px solid var(--line);
       display: flex;
       flex-direction: column;
+      min-height: 0;
+      background: var(--surface);
+    }
+
+    .detail {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding: 24px;
+      min-height: 0;
+    }
+
+    .detail-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .tag {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    .tag[data-type="battle"] { color: var(--red); }
+    .tag[data-type="city"] { color: #9fb4d8; }
+
+    .stepper { display: flex; gap: 2px; }
+
+    .stepper button {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      color: var(--muted);
+    }
+
+    .stepper button:hover { background: var(--surface-2); color: var(--text); }
+
+    .detail h1 {
+      font-family: var(--serif);
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: 0.02em;
+    }
+
+    .region { color: var(--muted); margin-top: 2px; }
+
+    .summary {
+      margin-top: 16px;
+      color: #c9c6bf;
+      line-height: 1.65;
+    }
+
+    .facts {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px 16px;
+      padding: 14px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+
+    .facts dt { color: var(--faint); }
+    .facts dd { color: var(--text); }
+
+    .section-title {
+      margin: 22px 0 10px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--faint);
+    }
+
+    .timeline { list-style: none; }
+
+    .timeline li {
+      display: grid;
+      grid-template-columns: 56px 1fr;
       gap: 10px;
+      padding: 8px 0;
+      font-size: 13px;
+      color: #c9c6bf;
     }
 
-    .details-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      align-items: center;
-    }
+    .timeline li + li { border-top: 1px solid rgba(35, 40, 51, 0.6); }
 
-    .details-header-main {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .details-location-name {
-      font-size: 18px;
+    .ep {
+      font-size: 11px;
       font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--gold);
+      padding-top: 1px;
     }
 
-    .details-meta {
+    .people { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .person {
       font-size: 12px;
-      color: var(--text-muted);
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .meta-pill {
-      padding: 2px 8px;
-      border-radius: var(--radius-pill);
-      border: 1px solid var(--border-subtle);
-      background: rgba(10, 12, 20, 0.9);
-    }
-
-    .meta-pill.highlight {
-      border-color: rgba(245, 196, 83, 0.7);
-      color: var(--accent);
-      background: var(--accent-soft);
-    }
-
-    .spoiler-note {
-      font-size: 11px;
-      color: var(--danger);
-      text-transform: uppercase;
-      letter-spacing: 0.09em;
-    }
-
-    .details-description {
-      font-size: 13px;
-      line-height: 1.58;
-      color: #dfe3f0;
-      padding: 10px 11px;
-      border-radius: 12px;
-      background: rgba(6, 9, 18, 0.96);
-      border: 1px solid var(--border-subtle);
-    }
-
-    .details-highlight {
-      margin-top: 6px;
-      font-size: 12px;
-      color: #f8e3b3;
-    }
-
-    .details-list-header {
-      margin-top: 10px;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .details-list-header span.count {
-      font-weight: 400;
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-
-    .poi-list {
-      margin-top: 6px;
-      max-height: 220px;
-      overflow: auto;
-      padding-right: 2px;
-    }
-
-    .poi-list-item {
-      padding: 7px 8px;
-      border-radius: 10px;
-      border: 1px solid transparent;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      cursor: pointer;
-      transition: background 0.12s ease, border-color 0.12s ease,
-        transform 0.08s ease;
-      font-size: 13px;
-    }
-
-    .poi-list-item:hover {
-      background: rgba(17, 20, 33, 0.95);
-      border-color: rgba(255, 255, 255, 0.07);
-      transform: translateY(-1px);
-    }
-
-    .poi-list-item.active {
-      background: rgba(245, 196, 83, 0.12);
-      border-color: rgba(245, 196, 83, 0.65);
-    }
-
-    .poi-list-name {
-      font-weight: 500;
-    }
-
-    .poi-list-meta {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-
-    .empty-state {
-      font-size: 13px;
-      color: var(--text-muted);
-      padding: 10px 2px;
-    }
-
-    /* Scrollbar tweaks (optional) */
-    .poi-list::-webkit-scrollbar {
-      width: 6px;
-    }
-    .poi-list::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    .poi-list::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.12);
+      padding: 3px 10px;
       border-radius: 999px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      color: #c9c6bf;
+    }
+
+    .trivia {
+      margin-top: 22px;
+      padding: 12px 14px;
+      border-left: 2px solid var(--gold);
+      background: var(--gold-soft);
+      border-radius: 0 8px 8px 0;
+      font-size: 13px;
+      color: #d8d2c3;
+    }
+
+    .trivia strong { color: var(--gold); font-weight: 600; }
+
+    .spoiler { margin-top: 18px; font-size: 11px; color: var(--faint); }
+
+    /* ---------- Location list ---------- */
+
+    .list-wrap {
+      flex: 0 0 auto;
+      border-top: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      height: 38%;
+      min-height: 200px;
+    }
+
+    .search {
+      margin: 12px 16px 6px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .search:focus { border-color: rgba(217, 180, 90, 0.5); }
+
+    .list { overflow-y: auto; padding: 0 8px 12px; }
+
+    .list-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .list-item:hover { background: var(--surface-2); }
+    .list-item.active { background: var(--gold-soft); }
+    .list-item.active .li-name { color: var(--gold); }
+
+    .li-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); flex: none; }
+    .li-dot[data-type="battle"] { background: var(--red); }
+    .li-dot[data-type="city"] { background: #9fb4d8; }
+    .li-name { flex: 1; }
+    .li-region { color: var(--faint); font-size: 12px; }
+
+    .empty { color: var(--faint); padding: 12px 10px; font-size: 13px; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
+
+    /* ---------- Mobile ---------- */
+
+    @media (max-width: 900px) {
+      .header { height: auto; padding: 14px 16px; flex-direction: column; align-items: flex-start; gap: 10px; }
+      .layout { grid-template-columns: minmax(0, 1fr); height: auto; }
+      .map-pane { padding: 16px; }
+      .map-frame { width: 100%; }
+      .panel { border-left: 0; border-top: 1px solid var(--line); }
+      .detail { overflow: visible; padding: 20px 16px; }
+      .list-wrap { height: auto; }
+      .list { max-height: 320px; }
     }
   </style>
 </head>
 <body>
-  <div class="app-shell">
-    <header class="header">
-      <div class="title-group">
-        <div class="title">
-          <span class="sigil-dot"></span>
-          Game of Thrones
-          <span style="opacity: 0.6; font-weight: 400;">/ War of the Five Kings Atlas</span>
+  <header class="header">
+    <div class="brand">Westeros <span>Atlas</span></div>
+    <nav class="filters" id="filters">
+      <button class="filter active" data-filter="all">All</button>
+      <button class="filter" data-filter="seat">Seats</button>
+      <button class="filter" data-filter="battle">Battles</button>
+      <button class="filter" data-filter="city">Cities</button>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <section class="map-pane">
+      <div class="map-frame" id="frame">
+        <div class="map-canvas" id="canvas">
+          <img class="map-img" src="westeros-map.jpg" alt="Map of Westeros and western Essos" draggable="false" />
         </div>
-        <div class="subtitle">
-          Click major locations to see key events that happened there in the show (light spoilers).
+        <div class="map-controls">
+          <button id="zoom-in" title="Zoom in">+</button>
+          <button id="zoom-out" title="Zoom out">−</button>
+          <button id="zoom-reset" title="Reset view">⤢</button>
         </div>
       </div>
-      <div class="badge-row">
-        <div class="badge badge-accent">Interactive Map</div>
-        <div class="badge">POIs: Battles, Seats of Power, Pivotal Scenes</div>
+    </section>
+
+    <aside class="panel">
+      <article class="detail" id="detail"></article>
+      <div class="list-wrap">
+        <input class="search" id="search" type="search" placeholder="Search locations…" autocomplete="off" />
+        <div class="list" id="list"></div>
       </div>
-    </header>
-
-    <div class="content">
-      <!-- MAP PANEL -->
-      <section class="map-panel">
-        <div class="map-wrapper" id="map">
-          <div class="map-toolbar">
-            <button class="map-chip active" data-filter="all">
-              <span class="dot"></span> All
-            </button>
-            <button class="map-chip" data-filter="castle">Castles</button>
-            <button class="map-chip" data-filter="battle">Battles</button>
-            <button class="map-chip" data-filter="politics">Politics & Courts</button>
-          </div>
-
-          <!-- POIs will be injected here -->
-          <div class="map-overlay-vignette"></div>
-
-        </div>
-      </section>
-
-      <!-- DETAILS PANEL -->
-      <section class="details-panel">
-        <div class="details-header">
-          <div class="details-header-main">
-            <div class="details-location-name" id="details-title">
-              Choose a location
-            </div>
-            <div class="details-meta" id="details-meta">
-              <span class="meta-pill">No location selected</span>
-            </div>
-          </div>
-          <div class="spoiler-note">Contains story spoilers</div>
-        </div>
-
-        <div class="details-description" id="details-description">
-          Click a glowing marker on the map, or pick a place from the list below to see a quick lore recap of what happened there in the HBO series.
-          <div class="details-highlight">
-            Tip: Use this side panel like a mini wiki while you rewatch or re-read.
-          </div>
-        </div>
-
-        <div class="details-list-header">
-          <span>Major Locations & Events</span>
-          <span class="count" id="poi-count">0 places</span>
-        </div>
-
-        <div class="poi-list" id="poi-list">
-          <div class="empty-state">
-            Start by selecting a location to populate this list.
-          </div>
-        </div>
-      </section>
-    </div>
-  </div>
+    </aside>
+  </main>
 
   <script>
-    // --- DATA: Points of Interest (POIs)
+    // x / y are percentages of the map image. Alt-click the map to log new coordinates.
+    const TYPES = { seat: "Seat of Power", battle: "Battlefield", city: "City" };
+
+    const REGION_LABELS = [
+      { text: "Beyond the Wall", x: 28, y: 14 },
+      { text: "The North", x: 38, y: 52 },
+      { text: "Sunset Sea", x: 10, y: 80 },
+      { text: "Shivering Sea", x: 76, y: 32 },
+      { text: "Essos", x: 84, y: 78 },
+    ];
+
     const POIS = [
-  {
-    id: "kings-landing",
-    name: "King's Landing",
-    region: "The Crownlands",
-    type: "politics",
-    typeLabel: "Capital / Politics",
-    x: 49,   // was 53
-    y: 67,   // was 64
-    summary:
-      "Capital of the Seven Kingdoms and seat of the Iron Throne for most of the series.",
-    events: [
-      "Ned Stark serves briefly as Hand of the King and uncovers the truth about Joffrey's parentage.",
-      "The Battle of the Blackwater, where Tyrion and wildfire defend the city from Stannis Baratheon.",
-      "Cersei's rise to power, her trial by the Faith, and the destruction of the Great Sept of Baelor with wildfire."
-    ]
-  },
-  {
-    id: "winterfell",
-    name: "Winterfell",
-    region: "The North",
-    type: "castle",
-    typeLabel: "Castle / House Stark",
-    x: 44,  // was 48
-    y: 33,  // was 30
-    summary:
-      "Ancestral seat of House Stark and one of the most important strongholds in the North.",
-    events: [
-      "The Starks receive King Robert Baratheon, setting the main story in motion.",
-      "Bran Stark's fall from the tower, witnessed by Jaime and Cersei Lannister.",
-      "Theon Greyjoy's brief occupation, followed by the brutal takeover by House Bolton.",
-      "The Battle of the Bastards, where Jon Snow and Sansa reclaim the castle from Ramsay Bolton."
-    ]
-  },
-  {
-    id: "the-wall",
-    name: "Castle Black & The Wall",
-    region: "The North",
-    type: "castle",
-    typeLabel: "Night's Watch / Border",
-    x: 45,  // was 49
-    y: 18,  // was 15
-    summary:
-      "A massive wall of ice defending the realms of men from the dangers beyond.",
-    events: [
-      "Jon Snow joins the Night's Watch and rises from recruit to Lord Commander.",
-      "The Great Ranging and encounter with the White Walkers and wildlings.",
-      "The Battle of Castle Black when wildlings assault the Wall.",
-      "The Night King and the army of the dead eventually breach the Wall."
-    ]
-  },
-  {
-    id: "hardhome",
-    name: "Hardhome",
-    region: "Beyond the Wall",
-    type: "battle",
-    typeLabel: "Battle / White Walkers",
-    x: 51,  // was 55
-    y: 12,  // was 9
-    summary:
-      "A wildling settlement that becomes the site of a devastating clash with the White Walkers.",
-    events: [
-      "Jon Snow travels to Hardhome to rescue wildlings and bring them south of the Wall.",
-      "The Night King leads a surprise assault, slaughtering the living.",
-      "The iconic moment where the Night King raises the dead in front of Jon."
-    ]
-  },
-  {
-    id: "twins",
-    name: "The Twins",
-    region: "The Riverlands",
-    type: "battle",
-    typeLabel: "Stronghold / Ambush",
-    x: 42,  // was 46
-    y: 49,  // was 46
-    summary:
-      "Twin castles controlled by House Frey, guarding the strategic crossing of the Green Fork.",
-    events: [
-      "Robb Stark seeks passage during his campaign in the War of the Five Kings.",
-      "The infamous Red Wedding occurs here, where Robb Stark, Catelyn Stark, and many Northern lords are betrayed and killed under guest right."
-    ]
-  },
-  {
-    id: "riverrun",
-    name: "Riverrun",
-    region: "The Riverlands",
-    type: "castle",
-    typeLabel: "Castle / House Tully",
-    x: 39,  // was 43
-    y: 55,  // was 52
-    summary:
-      "Seat of House Tully and key stronghold in the Riverlands.",
-    events: [
-      "Catelyn Stark's home and the place where Robb musters Riverland support.",
-      "Later besieged by the Freys and Lannisters after the Red Wedding.",
-      "Brienne of Tarth and Jaime Lannister both attempt to negotiate control of the castle."
-    ]
-  },
-  {
-    id: "harrenhal",
-    name: "Harrenhal",
-    region: "The Riverlands",
-    type: "castle",
-    typeLabel: "Ruined Castle",
-    x: 45,  // was 49
-    y: 57,  // was 54
-    summary:
-      "A colossal, half-ruined castle said to be cursed after being burned by dragons.",
-    events: [
-      "Arya Stark serves incognito as a cupbearer while Tywin Lannister holds court there.",
-      "Gendry and other captives are taken there by the Lannisters.",
-      "Used as a base by multiple factions throughout the war, but never truly held for long."
-    ]
-  },
-  {
-    id: "dragonstone",
-    name: "Dragonstone",
-    region: "The Narrow Sea",
-    type: "castle",
-    typeLabel: "Island Stronghold",
-    x: 55,  // was 59
-    y: 66,  // was 63
-    summary:
-      "Ancestral Targaryen stronghold built on a volcanic island in Blackwater Bay.",
-    events: [
-      "Stannis Baratheon rules from here early in the war, advised by Melisandre.",
-      "The ritual with Gendry's king's blood and the burning of the Seven idols.",
-      "Daenerys later lands here when she finally returns to Westeros and plans her conquest."
-    ]
-  },
-  {
-    id: "highgarden",
-    name: "Highgarden",
-    region: "The Reach",
-    type: "castle",
-    typeLabel: "Castle / House Tyrell",
-    x: 41,  // was 45
-    y: 81,  // was 78
-    summary:
-      "Prosperous and fertile seat of House Tyrell, known for wealth and cunning politics.",
-    events: [
-      "Home base of Olenna Tyrell, the 'Queen of Thorns', who plays a key role in court intrigue.",
-      "Eventually falls to the Lannister army in a swift campaign.",
-      "Olenna's final confession about Joffrey's death occurs here."
-    ]
-  },
-  {
-    id: "pyke",
-    name: "Pyke",
-    region: "The Iron Islands",
-    type: "castle",
-    typeLabel: "Stronghold / House Greyjoy",
-    x: 34,  // was 38
-    y: 59,  // was 56
-    summary:
-      "Storm-battered seat of House Greyjoy, perched on sea stacks in the Iron Islands.",
-    events: [
-      "Theon Greyjoy returns home and struggles for his father's approval.",
-      "Kingsmoot where Euron Greyjoy claims the Salt Throne.",
-      "A launching point for Greyjoy naval raids and fleets."
-    ]
-  },
-  {
-    id: "braavos",
-    name: "Braavos",
-    region: "Essos",
-    type: "politics",
-    typeLabel: "Free City / Guilds",
-    x: 70,  // was 74
-    y: 41,  // was 38
-    summary:
-      "Powerful Free City known for the Iron Bank and the Faceless Men.",
-    events: [
-      "Arya Stark trains with the Faceless Men at the House of Black and White.",
-      "The Iron Bank finances several claimants to the throne, tipping the balance of power.",
-      "Arya learns to change faces and ultimately decides which parts of her old identity to keep."
-    ]
-  },
-  {
-    id: "mereen",
-    name: "Meereen",
-    region: "Slaver's Bay (Essos)",
-    type: "politics",
-    typeLabel: "City / Daenerys' Rule",
-    x: 78,  // was 82
-    y: 83,  // was 80
-    summary:
-      "Largest of the cities Daenerys conquers in Slaver's Bay.",
-    events: [
-      "Daenerys takes the city and tries to end slavery while ruling as queen.",
-      "The Sons of the Harpy resist her rule with masked assassins.",
-      "She ultimately leaves Meereen in the hands of local allies to sail for Westeros."
-    ]
-  }
-];
+      {
+        id: "castle-black",
+        name: "Castle Black",
+        region: "The Wall",
+        type: "seat",
+        x: 32, y: 32,
+        summary: "Headquarters of the Night's Watch, set at the foot of the seven-hundred-foot Wall of ice that guards the realms of men from what lies beyond.",
+        facts: { "Held by": "The Night's Watch", "Built": "Age of Heroes (by Bran the Builder, in legend)", "First seen": "Season 1" },
+        events: [
+          ["S1", "Jon Snow and Samwell Tarly take the black and swear their vows."],
+          ["S4E9", "The Battle of Castle Black: the Watch holds the Wall against Mance Rayder's wildlings."],
+          ["S5E10", "Lord Commander Jon Snow is stabbed by his own brothers — \"For the Watch.\""],
+          ["S6E2", "Melisandre resurrects Jon."],
+          ["S7E7", "The Night King's undead Viserion brings down the Wall at Eastwatch."],
+        ],
+        people: ["Jon Snow", "Samwell Tarly", "Jeor Mormont", "Alliser Thorne", "Maester Aemon", "Tormund"],
+        trivia: "The Wall scenes were filmed in a quarry outside Belfast, with the ice face added digitally.",
+      },
+      {
+        id: "hardhome",
+        name: "Hardhome",
+        region: "Beyond the Wall",
+        type: "battle",
+        x: 42, y: 24,
+        summary: "A ruined wildling settlement on the coast beyond the Wall, and the place where the living first learned the true scale of the army of the dead.",
+        facts: { "Held by": "Free Folk", "First seen": "Season 5" },
+        events: [
+          ["S5E8", "Jon sails north to evacuate the Free Folk and is caught in a massacre by the White Walkers."],
+          ["S5E8", "Jon shatters a White Walker with Valyrian steel, proving Longclaw can kill them."],
+          ["S5E8", "The Night King raises every fallen body as Jon's boat pulls away."],
+        ],
+        people: ["Jon Snow", "Tormund", "Night King", "Karsi"],
+        trivia: "The episode was not adapted from the books — Hardhome is only mentioned in passing there.",
+      },
+      {
+        id: "winterfell",
+        name: "Winterfell",
+        region: "The North",
+        type: "seat",
+        x: 34, y: 45,
+        summary: "Ancestral seat of House Stark for eight thousand years, built over hot springs that warm its walls through the long winters.",
+        facts: { "House": "Stark", "Words": "\"Winter Is Coming\"", "First seen": "Season 1, Episode 1" },
+        events: [
+          ["S1E1", "King Robert visits to name Ned Hand; Bran is pushed from the tower by Jaime."],
+          ["S2E6", "Theon Greyjoy seizes the castle and stages the \"deaths\" of Bran and Rickon."],
+          ["S6E9", "The Battle of the Bastards: Jon and Sansa retake Winterfell from Ramsay Bolton."],
+          ["S7E7", "Sansa and Arya turn the tables on Littlefinger and execute him."],
+          ["S8E3", "The Long Night: the living make their stand, and Arya kills the Night King."],
+        ],
+        people: ["Ned Stark", "Catelyn Stark", "Sansa Stark", "Bran Stark", "Theon Greyjoy", "Ramsay Bolton"],
+        trivia: "Exteriors in Season 1 were shot at Castle Ward in Northern Ireland; later seasons used a full set built near Belfast.",
+      },
+      {
+        id: "twins",
+        name: "The Twins",
+        region: "The Riverlands",
+        type: "battle",
+        x: 37, y: 64,
+        summary: "Twin castles of House Frey straddling the Green Fork. Whoever holds them controls the only crossing for hundreds of miles — and Walder Frey charges dearly for it.",
+        facts: { "House": "Frey", "Lord": "Walder Frey", "First seen": "Season 1" },
+        events: [
+          ["S1E9", "Catelyn buys Robb's army passage by promising marriages to Frey children."],
+          ["S3E9", "The Red Wedding: Robb, Catelyn, Talisa and the Northern host are murdered under guest right."],
+          ["S6E10", "Arya, disguised as a servant, cuts Walder Frey's throat."],
+          ["S7E1", "Wearing Walder's face, Arya poisons the men of House Frey."],
+        ],
+        people: ["Walder Frey", "Robb Stark", "Catelyn Stark", "Roose Bolton", "Arya Stark"],
+        trivia: "The Red Wedding is based on two real Scottish events: the Black Dinner (1440) and the Glencoe Massacre (1692).",
+      },
+      {
+        id: "riverrun",
+        name: "Riverrun",
+        region: "The Riverlands",
+        type: "seat",
+        x: 31, y: 72,
+        summary: "Seat of House Tully, built where two rivers meet so that, with its sluice gates opened, the castle becomes an island.",
+        facts: { "House": "Tully", "Words": "\"Family, Duty, Honor\"", "First seen": "Season 3" },
+        events: [
+          ["S3E3", "Hoster Tully's funeral, where Edmure misses the burning boat three times."],
+          ["S6E7", "Jaime arrives to end the Frey siege held up by the Blackfish."],
+          ["S6E8", "Edmure surrenders the castle; Brynden \"Blackfish\" Tully dies fighting."],
+        ],
+        people: ["Catelyn Stark", "Edmure Tully", "Brynden Tully", "Hoster Tully", "Jaime Lannister"],
+        trivia: "Brynden Tully held Riverrun with two years of provisions inside the walls.",
+      },
+      {
+        id: "harrenhal",
+        name: "Harrenhal",
+        region: "The Riverlands",
+        type: "seat",
+        x: 40, y: 72,
+        summary: "The largest castle in Westeros, half-melted when Aegon the Conqueror's dragons burned Harren the Black inside it. Every house that has held it has come to ruin.",
+        facts: { "Built by": "Harren the Black", "Notable for": "A reputed curse", "First seen": "Season 2" },
+        events: [
+          ["S2", "Arya serves as Tywin Lannister's cupbearer and uses Jaqen H'ghar's three deaths."],
+          ["S3", "Roose Bolton holds the castle; Littlefinger is named its lord."],
+          ["S3E7", "Jaime leaps into the bear pit to save Brienne."],
+        ],
+        people: ["Arya Stark", "Tywin Lannister", "Jaqen H'ghar", "Roose Bolton", "Brienne of Tarth"],
+        trivia: "It sits on the northern shore of the God's Eye, the lake whose island is home to the Isle of Faces.",
+      },
+      {
+        id: "kings-landing",
+        name: "King's Landing",
+        region: "The Crownlands",
+        type: "city",
+        x: 43, y: 77,
+        summary: "Capital of the Seven Kingdoms and home of the Iron Throne. Over half a million people live packed below the Red Keep, where most of the realm's plots are hatched.",
+        facts: { "Ruled from": "The Red Keep", "Founded by": "Aegon I Targaryen", "First seen": "Season 1" },
+        events: [
+          ["S1E9", "Ned Stark is beheaded on Joffrey's order at the Great Sept of Baelor."],
+          ["S2E9", "The Battle of the Blackwater: Tyrion's wildfire breaks Stannis's fleet."],
+          ["S4E2", "The Purple Wedding: Joffrey is poisoned at his own feast."],
+          ["S5E10", "Cersei's walk of atonement through the city."],
+          ["S6E10", "Cersei destroys the Great Sept with wildfire and takes the throne."],
+          ["S8E5", "Daenerys burns the city from Drogon's back after the bells ring."],
+        ],
+        people: ["Cersei Lannister", "Tyrion Lannister", "Joffrey Baratheon", "Varys", "Littlefinger", "Ned Stark"],
+        trivia: "Dubrovnik, Croatia stood in for the city from Season 2 onward; Season 1 used Malta.",
+      },
+      {
+        id: "dragonstone",
+        name: "Dragonstone",
+        region: "Blackwater Bay",
+        type: "seat",
+        x: 53.4, y: 77.2,
+        summary: "An ancient volcanic island fortress built by the Valyrians, with dragon-carved walls and mines full of dragonglass.",
+        facts: { "Held by": "Stannis Baratheon, later Daenerys Targaryen", "First seen": "Season 2, Episode 1" },
+        events: [
+          ["S2E1", "Melisandre burns the statues of the Seven and Stannis declares himself king."],
+          ["S3E8", "Melisandre leeches Gendry's king's blood."],
+          ["S7E1", "Daenerys finally lands on Westerosi soil at her ancestral home."],
+          ["S7E3", "Jon Snow meets Daenerys and asks to mine the dragonglass."],
+        ],
+        people: ["Stannis Baratheon", "Melisandre", "Davos Seaworth", "Shireen Baratheon", "Daenerys Targaryen"],
+        trivia: "Daenerys was born here during a storm — hence \"Stormborn\".",
+      },
+      {
+        id: "eyrie",
+        name: "The Eyrie",
+        region: "The Vale of Arryn",
+        type: "seat",
+        x: 49, y: 66.5,
+        summary: "Seat of House Arryn, perched on a mountain peak and said to be impregnable. Its sky cells have only three walls; its Moon Door opens onto empty air.",
+        facts: { "House": "Arryn", "Words": "\"As High as Honor\"", "First seen": "Season 1" },
+        events: [
+          ["S1E5", "Catelyn brings a captive Tyrion to her sister Lysa."],
+          ["S1E6", "Bronn wins Tyrion's trial by combat."],
+          ["S4E7", "Littlefinger pushes Lysa through the Moon Door."],
+        ],
+        people: ["Lysa Arryn", "Robin Arryn", "Littlefinger", "Sansa Stark", "Tyrion Lannister"],
+        trivia: "Jon Arryn's death, the event that kicks off the whole series, is first suspected in a letter from Lysa.",
+      },
+      {
+        id: "pyke",
+        name: "Pyke",
+        region: "The Iron Islands",
+        type: "seat",
+        x: 23, y: 67,
+        summary: "Storm-battered seat of House Greyjoy, its towers built on sea stacks joined by swaying rope bridges.",
+        facts: { "House": "Greyjoy", "Words": "\"We Do Not Sow\"", "First seen": "Season 2" },
+        events: [
+          ["S2E2", "Theon returns home after ten years as a Stark ward."],
+          ["S6E2", "Euron throws his brother Balon off a rope bridge."],
+          ["S6E5", "The Kingsmoot crowns Euron; Yara and Theon flee with the best ships."],
+        ],
+        people: ["Balon Greyjoy", "Theon Greyjoy", "Yara Greyjoy", "Euron Greyjoy"],
+        trivia: "The Ironborn worship the Drowned God; \"What is dead may never die\" is their prayer, not their house words.",
+      },
+      {
+        id: "casterly-rock",
+        name: "Casterly Rock",
+        region: "The Westerlands",
+        type: "seat",
+        x: 21, y: 75.5,
+        summary: "The seat of House Lannister, carved into a mountain of stone above the Sunset Sea. Its gold mines made the Lannisters the richest family in Westeros.",
+        facts: { "House": "Lannister", "Words": "\"Hear Me Roar!\"", "First seen": "Season 7" },
+        events: [
+          ["S7E3", "Grey Worm's Unsullied take the castle through the sewers Tyrion built."],
+          ["S7E3", "Most of the Lannister army is elsewhere — Jaime has marched on Highgarden."],
+        ],
+        people: ["Tywin Lannister", "Cersei Lannister", "Jaime Lannister", "Tyrion Lannister"],
+        trivia: "Despite being discussed constantly, the castle isn't shown on screen until Season 7.",
+      },
+      {
+        id: "highgarden",
+        name: "Highgarden",
+        region: "The Reach",
+        type: "seat",
+        x: 29, y: 85,
+        summary: "Seat of House Tyrell in the fertile Reach, the breadbasket of the Seven Kingdoms. The Tyrells' grain and gold keep the capital fed.",
+        facts: { "House": "Tyrell", "Words": "\"Growing Strong\"", "First seen": "Season 7" },
+        events: [
+          ["S7E3", "Jaime's army takes Highgarden in a swift strike."],
+          ["S7E3", "Olenna drinks poison and confesses to Jaime that she killed Joffrey."],
+        ],
+        people: ["Olenna Tyrell", "Margaery Tyrell", "Loras Tyrell", "Mace Tyrell"],
+        trivia: "\"Tell Cersei. I want her to know it was me.\" — Olenna's last line.",
+      },
+      {
+        id: "oldtown",
+        name: "Oldtown",
+        region: "The Reach",
+        type: "city",
+        x: 21, y: 89,
+        summary: "The oldest city in Westeros and home of the Citadel, where maesters are trained and the realm's knowledge is kept.",
+        facts: { "Landmark": "The Citadel", "First seen": "Season 6, Episode 10" },
+        events: [
+          ["S6E10", "Sam arrives with Gilly and Little Sam and enters the great library."],
+          ["S7", "Sam secretly cures Jorah Mormont's greyscale."],
+          ["S7", "Sam finds the record of Rhaegar's annulment, a clue to Jon's parentage."],
+        ],
+        people: ["Samwell Tarly", "Gilly", "Archmaester Ebrose", "Jorah Mormont"],
+        trivia: "The Citadel library set took inspiration from the Strahov Monastery in Prague.",
+      },
+      {
+        id: "storms-end",
+        name: "Storm's End",
+        region: "The Stormlands",
+        type: "seat",
+        x: 50.5, y: 83.5,
+        summary: "Seat of House Baratheon, raised on Shipbreaker Bay with walls built to survive the storms that wrecked six earlier castles.",
+        facts: { "House": "Baratheon", "Words": "\"Ours Is the Fury\"", "First seen": "Mentioned only" },
+        events: [
+          ["S2E4", "Melisandre gives birth to a shadow beneath the castle walls."],
+          ["S2E5", "Renly is killed by the shadow in his camp before he can besiege Storm's End."],
+          ["S8E4", "Daenerys names Gendry Lord of Storm's End."],
+        ],
+        people: ["Robert Baratheon", "Stannis Baratheon", "Renly Baratheon", "Gendry"],
+        trivia: "Legend says it was built by Durran Godsgrief with help from the children of the forest.",
+      },
+      {
+        id: "sunspear",
+        name: "Sunspear",
+        region: "Dorne",
+        type: "seat",
+        x: 62, y: 94,
+        summary: "Seat of House Martell on the eastern coast of Dorne — the only kingdom never conquered by Targaryen dragons.",
+        facts: { "House": "Martell", "Words": "\"Unbowed, Unbent, Unbroken\"", "First seen": "Season 5" },
+        events: [
+          ["S5", "Jaime and Bronn sneak into Dorne to bring Myrcella home."],
+          ["S5E10", "Ellaria Sand poisons Myrcella with a farewell kiss."],
+          ["S6E1", "Ellaria murders Prince Doran and seizes power."],
+        ],
+        people: ["Doran Martell", "Ellaria Sand", "Oberyn Martell", "The Sand Snakes", "Myrcella Baratheon"],
+        trivia: "The Water Gardens were filmed at the Real Alcázar in Seville.",
+      },
+      {
+        id: "braavos",
+        name: "Braavos",
+        region: "The Free Cities, Essos",
+        type: "city",
+        x: 67, y: 63,
+        summary: "A city of canals founded by escaped slaves, guarded by the giant Titan and home to the Iron Bank and the Faceless Men.",
+        facts: { "Landmarks": "Titan of Braavos, Iron Bank, House of Black and White", "First seen": "Season 4" },
+        events: [
+          ["S4E6", "Stannis and Davos persuade the Iron Bank to fund their war."],
+          ["S5E2", "Arya arrives and is taken in at the House of Black and White."],
+          ["S5E10", "Arya kills Meryn Trant and is blinded as punishment."],
+          ["S6E8", "Arya defeats the Waif and declares herself Arya Stark of Winterfell."],
+        ],
+        people: ["Arya Stark", "Jaqen H'ghar", "The Waif", "Tycho Nestoris", "Syrio Forel"],
+        trivia: "Syrio Forel, Arya's \"dancing master\", was the First Sword of Braavos.",
+      },
+      {
+        id: "meereen",
+        name: "Meereen",
+        region: "Slaver's Bay, Essos (off map)",
+        type: "city",
+        offmap: true,
+        x: 96, y: 88,
+        summary: "The greatest of the slave cities, topped by a vast bronze harpy. Daenerys conquers it and stays to learn how to rule.",
+        facts: { "Ruled by": "Daenerys Targaryen (S4–S6)", "First seen": "Season 4" },
+        events: [
+          ["S4E3", "Daenerys sends broken chains over the walls and the slaves rise."],
+          ["S4E10", "Unable to control them, Dany chains her dragons in the catacombs."],
+          ["S5E9", "Drogon rescues Daenerys from the Sons of the Harpy in Daznak's Pit."],
+          ["S6E9", "Daenerys's dragons destroy the masters' fleet."],
+        ],
+        people: ["Daenerys Targaryen", "Tyrion Lannister", "Missandei", "Grey Worm", "Daario Naharis", "Hizdahr zo Loraq"],
+        trivia: "Slaver's Bay lies far to the east, beyond the edge of this map.",
+      },
+    ];
 
-
+    // ---------- State ----------
+    const frame = document.getElementById("frame");
+    const canvas = document.getElementById("canvas");
+    const detailEl = document.getElementById("detail");
+    const listEl = document.getElementById("list");
+    const searchEl = document.getElementById("search");
 
     let selectedId = null;
     let activeFilter = "all";
+    let query = "";
+    const view = { scale: 1, x: 0, y: 0 };
+    const MIN_SCALE = 1, MAX_SCALE = 4;
 
-    const mapEl = document.getElementById("map");
-    const detailsTitleEl = document.getElementById("details-title");
-    const detailsMetaEl = document.getElementById("details-meta");
-    const detailsDescriptionEl = document.getElementById("details-description");
-    const poiListEl = document.getElementById("poi-list");
-    const poiCountEl = document.getElementById("poi-count");
+    const isVisible = (poi) =>
+      (activeFilter === "all" || poi.type === activeFilter) &&
+      (!query || (poi.name + " " + poi.region).toLowerCase().includes(query));
 
-    function renderMarkers() {
-      // Remove existing markers/labels (but not overlays/toolbar)
-      const oldMarkers = mapEl.querySelectorAll(".poi-marker, .poi-label");
-      oldMarkers.forEach((el) => el.remove());
-
-      POIS.forEach((poi) => {
-        if (activeFilter !== "all" && poi.type !== activeFilter) {
-          return;
-        }
-
-        const marker = document.createElement("button");
-        marker.className = "poi-marker";
-        marker.style.left = poi.x + "%";
-        marker.style.top = poi.y + "%";
-        marker.dataset.id = poi.id;
-
-        const label = document.createElement("div");
-        label.className = "poi-label";
-        label.style.left = poi.x + "%";
-        label.style.top = poi.y + "%";
-        label.textContent = poi.name;
-
-        marker.addEventListener("click", () => {
-          selectPoi(poi.id);
-        });
-
-        mapEl.appendChild(marker);
-        mapEl.appendChild(label);
+    // ---------- Map ----------
+    function buildMap() {
+      REGION_LABELS.forEach((r) => {
+        const el = document.createElement("div");
+        el.className = "region-label";
+        el.style.left = r.x + "%";
+        el.style.top = r.y + "%";
+        el.textContent = r.text;
+        canvas.appendChild(el);
       });
 
-      syncMarkerSelection();
+      POIS.forEach((poi) => {
+        const m = document.createElement("button");
+        m.className = "marker" + (poi.offmap ? " offmap" : "");
+        m.dataset.id = poi.id;
+        m.dataset.type = poi.type;
+        m.style.left = poi.x + "%";
+        m.style.top = poi.y + "%";
+        m.setAttribute("aria-label", poi.name);
+        m.innerHTML = `<span class="pin"></span><span class="name">${poi.name}${poi.offmap ? " →" : ""}</span>`;
+        m.addEventListener("click", () => select(poi.id, { fly: false }));
+        canvas.appendChild(m);
+      });
+    }
+
+    function syncMarkers() {
+      canvas.querySelectorAll(".marker").forEach((m) => {
+        const poi = POIS.find((p) => p.id === m.dataset.id);
+        m.classList.toggle("selected", poi.id === selectedId);
+        m.classList.toggle("dim", !isVisible(poi));
+      });
+    }
+
+    // ---------- Zoom & pan ----------
+    function clampView() {
+      const w = frame.clientWidth, h = frame.clientHeight;
+      view.scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, view.scale));
+      view.x = Math.min(0, Math.max(w - w * view.scale, view.x));
+      view.y = Math.min(0, Math.max(h - h * view.scale, view.y));
+    }
+
+    function applyView(animate = false) {
+      clampView();
+      canvas.classList.toggle("animate", animate);
+      canvas.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
+      canvas.style.setProperty("--inv", 1 / view.scale);
+    }
+
+    function zoomAt(factor, cx, cy, animate) {
+      const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, view.scale * factor));
+      const k = next / view.scale;
+      view.x = cx - (cx - view.x) * k;
+      view.y = cy - (cy - view.y) * k;
+      view.scale = next;
+      applyView(animate);
+    }
+
+    function flyTo(poi) {
+      const w = frame.clientWidth, h = frame.clientHeight;
+      view.scale = Math.max(view.scale, 2);
+      view.x = w / 2 - (poi.x / 100) * w * view.scale;
+      view.y = h / 2 - (poi.y / 100) * h * view.scale;
+      applyView(true);
+    }
+
+    function setupPanZoom() {
+      frame.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        const r = frame.getBoundingClientRect();
+        zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left, e.clientY - r.top, false);
+      }, { passive: false });
+
+      let drag = null;
+      frame.addEventListener("pointerdown", (e) => {
+        if (e.target.closest(".map-controls")) return;
+        drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y, moved: false };
+      });
+      frame.addEventListener("pointermove", (e) => {
+        if (!drag || e.pointerId !== drag.id) return;
+        const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+        if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+        if (!drag.moved) {
+          // Only capture once it's a real drag, so plain clicks still reach markers
+          drag.moved = true;
+          frame.setPointerCapture(e.pointerId);
+          frame.classList.add("dragging");
+        }
+        view.x = drag.vx + dx;
+        view.y = drag.vy + dy;
+        applyView(false);
+      });
+      const end = () => { drag = null; frame.classList.remove("dragging"); };
+      frame.addEventListener("pointerup", end);
+      frame.addEventListener("pointercancel", end);
+
+      const center = () => [frame.clientWidth / 2, frame.clientHeight / 2];
+      document.getElementById("zoom-in").onclick = () => zoomAt(1.5, ...center(), true);
+      document.getElementById("zoom-out").onclick = () => zoomAt(1 / 1.5, ...center(), true);
+      document.getElementById("zoom-reset").onclick = () => {
+        Object.assign(view, { scale: 1, x: 0, y: 0 });
+        applyView(true);
+      };
+
+      window.addEventListener("resize", () => applyView(false));
+
+      // Dev helper: alt-click logs image-relative coordinates for placing markers
+      frame.addEventListener("click", (e) => {
+        if (!e.altKey) return;
+        const r = canvas.getBoundingClientRect();
+        const x = ((e.clientX - r.left) / r.width) * 100;
+        const y = ((e.clientY - r.top) / r.height) * 100;
+        console.log(`x: ${x.toFixed(1)}, y: ${y.toFixed(1)}`);
+      });
+    }
+
+    // ---------- Panel ----------
+    function renderDetail(poi) {
+      const facts = Object.entries(poi.facts)
+        .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`)
+        .join("");
+      const events = poi.events
+        .map(([ep, text]) => `<li><span class="ep">${ep}</span><span>${text}</span></li>`)
+        .join("");
+      const people = poi.people.map((p) => `<span class="person">${p}</span>`).join("");
+
+      detailEl.innerHTML = `
+        <div class="detail-top">
+          <span class="tag" data-type="${poi.type}">${TYPES[poi.type]}</span>
+          <div class="stepper">
+            <button data-step="-1" title="Previous (←)">‹</button>
+            <button data-step="1" title="Next (→)">›</button>
+          </div>
+        </div>
+        <h1>${poi.name}</h1>
+        <div class="region">${poi.region}</div>
+        <p class="summary">${poi.summary}</p>
+        <dl class="facts">${facts}</dl>
+        <div class="section-title">Key moments</div>
+        <ul class="timeline">${events}</ul>
+        <div class="section-title">Notable figures</div>
+        <div class="people">${people}</div>
+        <div class="trivia"><strong>Did you know?</strong> ${poi.trivia}</div>
+        <div class="spoiler">Contains spoilers for the HBO series.</div>
+      `;
+      detailEl.scrollTop = 0;
+      detailEl.querySelectorAll("[data-step]").forEach((b) =>
+        b.addEventListener("click", () => step(Number(b.dataset.step)))
+      );
     }
 
     function renderList() {
-      poiListEl.innerHTML = "";
-      const visiblePois = POIS.filter(
-        (p) => activeFilter === "all" || p.type === activeFilter
+      const visible = POIS.filter(isVisible);
+      listEl.innerHTML = visible.length
+        ? visible
+            .map(
+              (p) => `<button class="list-item${p.id === selectedId ? " active" : ""}" data-id="${p.id}">
+                <span class="li-dot" data-type="${p.type}"></span>
+                <span class="li-name">${p.name}</span>
+                <span class="li-region">${p.region.replace(" (off map)", "")}</span>
+              </button>`
+            )
+            .join("")
+        : `<div class="empty">No locations match.</div>`;
+      listEl.querySelectorAll(".list-item").forEach((el) =>
+        el.addEventListener("click", () => select(el.dataset.id, { fly: true }))
       );
-      poiCountEl.textContent =
-        visiblePois.length + (visiblePois.length === 1 ? " place" : " places");
-
-      if (!visiblePois.length) {
-        const empty = document.createElement("div");
-        empty.className = "empty-state";
-        empty.textContent = "No locations match this filter.";
-        poiListEl.appendChild(empty);
-        return;
-      }
-
-      visiblePois.forEach((poi) => {
-        const item = document.createElement("div");
-        item.className = "poi-list-item";
-        item.dataset.id = poi.id;
-
-        const name = document.createElement("div");
-        name.className = "poi-list-name";
-        name.textContent = poi.name;
-
-        const meta = document.createElement("div");
-        meta.className = "poi-list-meta";
-        meta.textContent = `${poi.region} • ${poi.typeLabel}`;
-
-        item.appendChild(name);
-        item.appendChild(meta);
-
-        item.addEventListener("click", () => {
-          selectPoi(poi.id, { scroll: false });
-        });
-
-        poiListEl.appendChild(item);
-      });
-
-      syncListSelection();
     }
 
-    function selectPoi(id) {
+    function select(id, { fly = false } = {}) {
       const poi = POIS.find((p) => p.id === id);
       if (!poi) return;
       selectedId = id;
-
-      detailsTitleEl.textContent = poi.name;
-
-      // meta tags
-      detailsMetaEl.innerHTML = "";
-      const regionPill = document.createElement("span");
-      regionPill.className = "meta-pill";
-      regionPill.textContent = poi.region;
-
-      const typePill = document.createElement("span");
-      typePill.className = "meta-pill highlight";
-      typePill.textContent = poi.typeLabel;
-
-      const countPill = document.createElement("span");
-      countPill.className = "meta-pill";
-      countPill.textContent = `${poi.events.length} key event${
-        poi.events.length > 1 ? "s" : ""
-      }`;
-
-      detailsMetaEl.appendChild(regionPill);
-      detailsMetaEl.appendChild(typePill);
-      detailsMetaEl.appendChild(countPill);
-
-      // description
-      const listItems = poi.events
-        .map((e) => `<li>${e}</li>`)
-        .join("");
-
-      detailsDescriptionEl.innerHTML = `
-        <div>${poi.summary}</div>
-        <div class="details-highlight">Key moments:</div>
-        <ul style="margin-left: 1em; margin-top: 4px; padding-left: 10px; font-size: 12px;">
-          ${listItems}
-        </ul>
-      `;
-
-      syncMarkerSelection();
-      syncListSelection();
+      renderDetail(poi);
+      syncMarkers();
+      listEl.querySelectorAll(".list-item").forEach((el) =>
+        el.classList.toggle("active", el.dataset.id === id)
+      );
+      if (fly && view.scale > 1) flyTo(poi);
     }
 
-    function syncMarkerSelection() {
-      const markers = mapEl.querySelectorAll(".poi-marker");
-      markers.forEach((m) => {
-        if (m.dataset.id === selectedId) {
-          m.classList.add("selected");
-        } else {
-          m.classList.remove("selected");
-        }
-      });
+    function step(dir) {
+      const visible = POIS.filter(isVisible);
+      if (!visible.length) return;
+      const i = visible.findIndex((p) => p.id === selectedId);
+      const next = visible[(i + dir + visible.length) % visible.length];
+      select(next.id, { fly: true });
+      listEl.querySelector(`[data-id="${next.id}"]`)?.scrollIntoView({ block: "nearest" });
     }
 
-    function syncListSelection() {
-      const items = poiListEl.querySelectorAll(".poi-list-item");
-      items.forEach((item) => {
-        if (item.dataset.id === selectedId) {
-          item.classList.add("active");
-        } else {
-          item.classList.remove("active");
-        }
-      });
+    function refresh() {
+      renderList();
+      syncMarkers();
     }
 
-    function setupFilterChips() {
-      const chips = document.querySelectorAll(".map-chip");
-      chips.forEach((chip) => {
-        chip.addEventListener("click", () => {
-          chips.forEach((c) => c.classList.remove("active"));
-          chip.classList.add("active");
-          activeFilter = chip.dataset.filter || "all";
-          renderMarkers();
-          renderList();
-        });
-      });
-    }
+    // ---------- Init ----------
+    document.querySelectorAll(".filter").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filter").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        activeFilter = btn.dataset.filter;
+        refresh();
+      })
+    );
 
-    // Init
-    setupFilterChips();
-    renderMarkers();
+    searchEl.addEventListener("input", () => {
+      query = searchEl.value.trim().toLowerCase();
+      refresh();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.target === searchEl) return;
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); step(1); }
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); step(-1); }
+    });
+
+    buildMap();
+    setupPanZoom();
+    applyView();
     renderList();
-
-    // Pre-select a popular spot
-    selectPoi("kings-landing");
+    select("kings-landing");
   </script>
 </body>
 </html>
